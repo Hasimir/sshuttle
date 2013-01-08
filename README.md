@@ -1,4 +1,3 @@
-
 WARNING:
 On MacOS 10.6 (at least up to 10.6.6), your network will
 stop responding about 10 minutes after the first time you
@@ -59,7 +58,7 @@ Prerequisites
 This is how you use it:
 -----------------------
 
- - <tt>git clone git://github.com/apenwarr/sshuttle</tt>
+ - <tt>git clone --depth=1 http://github.com/apenwarr/sshuttle</tt>
     on your client machine. You'll need root or sudo
     access, and python needs to be installed.
 
