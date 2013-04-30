@@ -67,6 +67,7 @@ D,daemon   run in the background as a daemon
 V,version  print sshuttle's version number
 syslog     send log messages to syslog (default if you use --daemon)
 pidfile=   pidfile name (only if using --daemon) [./sshuttle.pid]
+dns-hosts= (internal use only)
 server     (internal use only)
 firewall   (internal use only)
 hostwatch  (internal use only)
@@ -94,7 +95,9 @@ try:
     elif opt.firewall:
         if len(extra) != 2:
             o.fatal('exactly two arguments expected')
-        sys.exit(firewall.main(int(extra[0]), int(extra[1]), opt.syslog))
+        port, dnsport = int(extra[0]), int(extra[1])
+        nslist = re.split(r'[\s,]+', opt.dns_hosts.strip()) if dnsport else []
+        sys.exit(firewall.main(port, dnsport, nslist, opt.syslog))
     elif opt.hostwatch:
         sys.exit(hostwatch.hw_main(extra))
     else:

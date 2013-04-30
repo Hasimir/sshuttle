@@ -70,7 +70,7 @@ def ipt_ttl(*args):
 # multiple copies shouldn't have overlapping subnets, or only the most-
 # recently-started one will win (because we use "-I OUTPUT 1" instead of
 # "-A OUTPUT").
-def do_iptables(port, dnsport, subnets):
+def do_iptables(port, dnsport, nslist, subnets):
     chain = 'sshuttle-%s' % port
 
     # basic cleanup/setup of chains
@@ -104,7 +104,6 @@ def do_iptables(port, dnsport, subnets):
                         '--to-ports', str(port))
                 
     if dnsport:
-        nslist = resolvconf_nameservers()
         for ip in nslist:
             ipt_ttl('-A', chain, '-j', 'REDIRECT',
                     '--dest', '%s/32' % ip,
@@ -255,7 +254,7 @@ def ipfw(*args):
     _call(argv)
 
 
-def do_ipfw(port, dnsport, subnets):
+def do_ipfw(port, dnsport, nslist, subnets):
     sport = str(port)
     xsport = str(port+1)
 
@@ -354,7 +353,6 @@ def do_ipfw(port, dnsport, subnets):
                                    IPPROTO_DIVERT)
         divertsock.bind(('0.0.0.0', port)) # IP field is ignored
 
-        nslist = resolvconf_nameservers()
         for ip in nslist:
             # relabel and then catch outgoing DNS requests
             ipfw('add', sport, 'divert', sport,
@@ -451,7 +449,7 @@ def ip_in_subnets(ip, subnets):
 # exit.  In case that fails, it's not the end of the world; future runs will
 # supercede it in the transproxy list, at least, so the leftover rules
 # are hopefully harmless.
-def main(port, dnsport, syslog):
+def main(port, dnsport, nslist, syslog):
     assert(port > 0)
     assert(port <= 65535)
     assert(dnsport >= 0)
@@ -516,7 +514,7 @@ def main(port, dnsport, syslog):
     try:
         if line:
             debug1('firewall manager: starting transproxy.\n')
-            do_wait = do_it(port, dnsport, subnets)
+            do_wait = do_it(port, dnsport, nslist, subnets)
             sys.stdout.write('STARTED\n')
         
         try:
@@ -546,5 +544,5 @@ def main(port, dnsport, syslog):
             debug1('firewall manager: undoing changes.\n')
         except:
             pass
-        do_it(port, 0, [])
+        do_it(port, 0, [], [])
         restore_etc_hosts(port)
