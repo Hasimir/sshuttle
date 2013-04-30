@@ -339,7 +339,8 @@ def _main(listener, fw, ssh_cmd, remotename, python, latency_control,
         mux.callback()
 
 
-def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
+def main(listenip, ssh_cmd, remotename, python, latency_control,
+         dns, dns_hosts,
          seed_hosts, auto_nets,
          subnets_include, subnets_exclude, syslog, daemon, pidfile):
     if syslog:
@@ -380,11 +381,12 @@ def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
     listenip = listener.getsockname()
     debug1('Listening on %r.\n' % (listenip,))
 
-    if dns:
+    if dns or dns_hosts:
         dnsip = dnslistener.getsockname()
         debug1('DNS listening on %r.\n' % (dnsip,))
         dnsport = dnsip[1]
-        dns_hosts = resolvconf_nameservers()
+        if dns:
+            dns_hosts += resolvconf_nameservers()
     else:
         dnsport = 0
         dnslistener = None

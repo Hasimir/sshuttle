@@ -54,6 +54,7 @@ l,listen=  transproxy to this ip address and port number [127.0.0.1:0]
 H,auto-hosts scan for remote hostnames and update local /etc/hosts
 N,auto-nets  automatically determine subnets to route
 dns        capture local DNS requests and forward to the remote DNS server
+dns-hosts= capture DNS requests to these servers and forward (comma-separated)
 python=    path to python interpreter on the remote server
 r,remote=  ssh hostname (and optional username) of remote sshuttle server
 x,exclude= exclude this subnet (can be used more than once)
@@ -67,7 +68,6 @@ D,daemon   run in the background as a daemon
 V,version  print sshuttle's version number
 syslog     send log messages to syslog (default if you use --daemon)
 pidfile=   pidfile name (only if using --daemon) [./sshuttle.pid]
-dns-hosts= (internal use only)
 server     (internal use only)
 firewall   (internal use only)
 hostwatch  (internal use only)
@@ -113,6 +113,7 @@ try:
         remotename = opt.remote
         if remotename == '' or remotename == '-':
             remotename = None
+        nslist = re.split(r'[\s,]+', opt.dns_hosts.strip()) if opt.dns_hosts else []
         if opt.seed_hosts and not opt.auto_hosts:
             o.fatal('--seed-hosts only works if you also use -H')
         if opt.seed_hosts:
@@ -127,6 +128,7 @@ try:
                              opt.python,
                              opt.latency_control,
                              opt.dns,
+                             nslist,
                              sh,
                              opt.auto_nets,
                              parse_subnets(includes),
