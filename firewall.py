@@ -70,8 +70,12 @@ def ipt_ttl(*args):
 # multiple copies shouldn't have overlapping subnets, or only the most-
 # recently-started one will win (because we use "-I OUTPUT 1" instead of
 # "-A OUTPUT").
-def do_iptables(port, dnsport, route_username, subnets):
+def do_iptables(port, dnsport, route_username, excludedports, subnets):
     chain = 'sshuttle-%s' % port
+
+    eportsargv = []
+    if excludedports:
+        eportsargv += ['--match', 'multiport', '!', '--dport', excludedports]
 
     # basic cleanup/setup of chains
     if ipt_chain_exists(chain):
@@ -107,8 +111,9 @@ def do_iptables(port, dnsport, route_username, subnets):
                 ipt_ttl('-A', chain, '-j', 'REDIRECT',
                         '--dest', '%s/%s' % (snet,swidth),
                         '-p', 'tcp',
-                        '--to-ports', str(port))
-                
+                        '--to-ports', str(port),
+                         *eportsargv)
+
     if dnsport:
         nslist = resolvconf_nameservers()
         for ip in nslist:
@@ -261,7 +266,7 @@ def ipfw(*args):
     _call(argv)
 
 
-def do_ipfw(port, dnsport, route_username, subnets):
+def do_ipfw(port, dnsport, route_username, excludedports, subnets):
     sport = str(port)
     xsport = str(port+1)
 
@@ -457,7 +462,7 @@ def ip_in_subnets(ip, subnets):
 # exit.  In case that fails, it's not the end of the world; future runs will
 # supercede it in the transproxy list, at least, so the leftover rules
 # are hopefully harmless.
-def main(port, dnsport, syslog, route_username):
+def main(port, dnsport, syslog, route_username, excludedports):
     assert(port > 0)
     assert(port <= 65535)
     assert(dnsport >= 0)
@@ -522,7 +527,7 @@ def main(port, dnsport, syslog, route_username):
     try:
         if line:
             debug1('firewall manager: starting transproxy.\n')
-            do_wait = do_it(port, dnsport, route_username, subnets)
+            do_wait = do_it(port, dnsport, route_username, excludedports, subnets)
             sys.stdout.write('STARTED\n')
         
         try:
@@ -552,5 +557,5 @@ def main(port, dnsport, syslog, route_username):
             debug1('firewall manager: undoing changes.\n')
         except:
             pass
-        do_it(port, 0, route_username, [])
+        do_it(port, 0, route_username, excludedports, [])
         restore_etc_hosts(port)
