@@ -326,16 +326,29 @@ def do_ipfw(port, dnsport, subnets):
 
     if subnets:
         # create new subnet entries
-        for swidth,sexclude,snet in sorted(subnets, reverse=True):
+        for swidth,dport,sexclude,snet in sorted(subnets, reverse=True):
             if sexclude:
-                ipfw('add', sport, 'skipto', xsport,
-                     'tcp',
-                     'from', 'any', 'to', '%s/%s' % (snet,swidth))
+                if dport > 0:
+                    ipfw('add', sport, 'skipto', xsport,
+                        'tcp',
+                        'from', 'any', 'to', '%s/%s' % (snet,swidth),
+                         '%d' % dport)
+                else:
+                    ipfw('add', sport, 'skipto', xsport,
+                        'tcp',
+                        'from', 'any', 'to', '%s/%s' % (snet,swidth))
             else:
-                ipfw('add', sport, 'fwd', '127.0.0.1,%d' % port,
-                     'tcp',
-                     'from', 'any', 'to', '%s/%s' % (snet,swidth),
-                     'not', 'ipttl', '42', 'keep-state', 'setup')
+                if dport > 0:
+                    ipfw('add', sport, 'fwd', '127.0.0.1,%d' % port,
+                        'tcp',
+                        'from', 'any', 'to', '%s/%s' % (snet,swidth),
+                         '%d' % dport,
+                        'not', 'ipttl', '42', 'keep-state', 'setup')
+                else:
+                    ipfw('add', sport, 'fwd', '127.0.0.1,%d' % port,
+                        'tcp',
+                        'from', 'any', 'to', '%s/%s' % (snet,swidth),
+                        'not', 'ipttl', '42', 'keep-state', 'setup')
 
     # This part is much crazier than it is on Linux, because MacOS (at least
     # 10.6, and probably other versions, and maybe FreeBSD too) doesn't
