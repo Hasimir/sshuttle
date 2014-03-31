@@ -1,4 +1,4 @@
-import re, struct, socket, select, traceback, time
+import itertools, re, struct, socket, select, traceback, time
 if not globals().get('skip_imports'):
     import ssnet, helpers, hostwatch
     import compat.ssubprocess as ssubprocess
@@ -112,6 +112,7 @@ class DnsProxy(Handler):
         self.mux = mux
         self.chan = chan
         self.tries = 0
+        self.peers = itertools.cycle(resolvconf_nameservers())
         self.peer = None
         self.request = request
         self.sock = sock
@@ -122,7 +123,7 @@ class DnsProxy(Handler):
         if self.tries >= 3:
             return
         self.tries += 1
-        self.peer = resolvconf_random_nameserver()
+        self.peer = self.peers.next()
         self.sock.connect((self.peer, 53))
         debug2('DNS: sending to %r\n' % self.peer)
         try:
