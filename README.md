@@ -49,9 +49,10 @@ Prerequisites
    (The server doesn't need iptables and doesn't need to be
    Linux.)
    
- - If you use MacOS or BSD on your client machine:
-   Your kernel needs to be compiled with IPFIREWALL_FORWARD
-   (MacOS has this by default) and you need to have ipfw
+ - If you use MacOS or BSD on your client machine: Your kernel needs
+   to be compiled with IPFIREWALL_FORWARD (MacOS has this by default,
+   though is gradually migrating to OpenBSD's pf, so ipfw is not
+   available on OS X 10.10.x and above) and you need to have ipfw
    available. (The server doesn't need to be MacOS or BSD.)
 
 
@@ -60,7 +61,7 @@ This is how you use it:
 
  - <tt>git clone --depth=1 http://github.com/apenwarr/sshuttle</tt>
     on your client machine. You'll need root or sudo
-    access, and python needs to be installed.
+    access, and python 2 needs to be installed.
 
  - The most basic use of sshuttle looks like:
   <tt>./sshuttle -r username@sshserver 0.0.0.0/0 -vv</tt>
@@ -84,6 +85,11 @@ local password to become root using either sudo or su, and
 then the remote ssh password.  Or you might have sudo and ssh set
 up to not require passwords, in which case you won't be
 prompted at all.)
+
+If you use ssh keys, including .pem keys on Amazon AWS, you may need
+to specify the path to your key with the -i ssh option and nest that
+in a command in sshuttle like this:
+  <tt>./sshuttle --dns -vvr username@sshserver 0/0 -e "ssh -i $HOME/.ssh/some_file.pem"</tt>
 
 That's it!  Now your local machine can access the remote network as if you
 were right there.  And if your "client" machine is a router, everyone on
