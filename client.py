@@ -96,17 +96,20 @@ def original_dst(sock):
 
 
 class FirewallClient:
-    def __init__(self, port, subnets_include, subnets_exclude, dnsport):
+    def __init__(self, port, subnets_include, subnets_exclude, dnsport, dns_hosts):
         self.port = port
         self.auto_nets = []
         self.subnets_include = subnets_include
         self.subnets_exclude = subnets_exclude
         self.dnsport = dnsport
+        self.dns_hosts = dns_hosts
         argvbase = ([sys.argv[1], sys.argv[0], sys.argv[1]] +
                     ['-v'] * (helpers.verbose or 0) +
                     ['--firewall', str(port), str(dnsport)])
         if ssyslog._p:
             argvbase += ['--syslog']
+        if dnsport:
+             argvbase += ['--dns-hosts', ','.join(dns_hosts)]
         argv_tries = [
             ['sudo', '-p', '[local sudo] Password: '] + argvbase,
             ['su', '-c', ' '.join(argvbase)],
@@ -337,7 +340,8 @@ def _main(listener, fw, ssh_cmd, remotename, python, latency_control,
         mux.callback()
 
 
-def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
+def main(listenip, ssh_cmd, remotename, python, latency_control,
+         dns, dns_hosts,
          seed_hosts, auto_nets,
          subnets_include, subnets_exclude, syslog, daemon, pidfile):
     if syslog:
@@ -378,15 +382,18 @@ def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
     listenip = listener.getsockname()
     debug1('Listening on %r.\n' % (listenip,))
 
-    if dns:
+    if dns or dns_hosts:
         dnsip = dnslistener.getsockname()
         debug1('DNS listening on %r.\n' % (dnsip,))
         dnsport = dnsip[1]
+        if dns:
+            dns_hosts += resolvconf_nameservers()
     else:
         dnsport = 0
         dnslistener = None
+        dns_hosts = []
 
-    fw = FirewallClient(listenip[1], subnets_include, subnets_exclude, dnsport)
+    fw = FirewallClient(listenip[1], subnets_include, subnets_exclude, dnsport, dns_hosts)
     
     try:
         return _main(listener, fw, ssh_cmd, remotename,
