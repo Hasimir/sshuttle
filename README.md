@@ -58,7 +58,7 @@ Prerequisites
 This is how you use it:
 -----------------------
 
- - <tt>git clone git://github.com/apenwarr/sshuttle</tt>
+ - <tt>git clone --depth=1 http://github.com/apenwarr/sshuttle</tt>
     on your client machine. You'll need root or sudo
     access, and python needs to be installed.
 
