@@ -77,7 +77,11 @@ This is how you use it:
    local network attacks such as Firesheep and friends.
 
  - OR if you have MacOS and want to try the GUI version:
+<<<<<<< HEAD
    <tt>make && open ui-macos/Sshuttle*.app</tt>
+=======
+        `make && open ui-macos/Sshuttle*.app`
+>>>>>>> pull/27
 
 (You may be prompted for one or more passwords; first, the
 local password to become root using either sudo or su, and
