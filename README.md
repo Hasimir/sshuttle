@@ -1,4 +1,3 @@
-
 WARNING:
 On MacOS 10.6 (at least up to 10.6.6), your network will
 stop responding about 10 minutes after the first time you
@@ -59,7 +58,7 @@ Prerequisites
 This is how you use it:
 -----------------------
 
- - <tt>git clone git://github.com/apenwarr/sshuttle</tt>
+ - <tt>git clone --depth=1 http://github.com/apenwarr/sshuttle</tt>
     on your client machine. You'll need root or sudo
     access, and python needs to be installed.
 
@@ -78,8 +77,7 @@ This is how you use it:
    local network attacks such as Firesheep and friends.
 
  - OR if you have MacOS and want to try the GUI version:
-        make
-        open ui-macos/Sshuttle*.app
+   <tt>make && open ui-macos/Sshuttle*.app</tt>
 
 (You may be prompted for one or more passwords; first, the
 local password to become root using either sudo or su, and

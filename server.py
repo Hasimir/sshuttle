@@ -1,4 +1,4 @@
-import re, struct, socket, select, traceback, time
+import itertools, re, struct, socket, select, traceback, time
 if not globals().get('skip_imports'):
     import ssnet, helpers, hostwatch
     import compat.ssubprocess as ssubprocess
@@ -9,20 +9,20 @@ if not globals().get('skip_imports'):
 def _ipmatch(ipstr):
     if ipstr == 'default':
         ipstr = '0.0.0.0/0'
-    m = re.match(r'^(\d+(\.\d+(\.\d+(\.\d+)?)?)?)(?:/(\d+))?$', ipstr)
+    # Regex to check that ipstr is formatted like an IPv4 address
+    m = re.match('^(\d+)' + '(\.\d+)?' * 3 + '(?:/(\d+))?$', ipstr)
     if m:
-        g = m.groups()
-        ips = g[0]
-        width = int(g[4] or 32)
-        if g[1] == None:
-            ips += '.0.0.0'
-            width = min(width, 8)
-        elif g[2] == None:
-            ips += '.0.0'
-            width = min(width, 16)
-        elif g[3] == None:
-            ips += '.0'
-            width = min(width, 24)
+        # If the network prefix width is specified, use it. Otherwise, assume 32
+        if '/' in ipstr:
+            ips, width = ipstr.split('/')
+            width = int(width)
+        else:
+            ips, width = ipstr, 32
+        # If ips doesn't have four octets, then assume that the network
+        # prefix width is constrained. Pad ips with 0s
+        octets = ips.count('.') + 1
+        width = min(width, 8 * octets)
+        ips += '.0' * (4 - octets)
         return (struct.unpack('!I', socket.inet_aton(ips))[0], width)
 
 
@@ -112,6 +112,7 @@ class DnsProxy(Handler):
         self.mux = mux
         self.chan = chan
         self.tries = 0
+        self.peers = itertools.cycle(resolvconf_nameservers())
         self.peer = None
         self.request = request
         self.sock = sock
@@ -122,7 +123,7 @@ class DnsProxy(Handler):
         if self.tries >= 3:
             return
         self.tries += 1
-        self.peer = resolvconf_random_nameserver()
+        self.peer = self.peers.next()
         self.sock.connect((self.peer, 53))
         debug2('DNS: sending to %r\n' % self.peer)
         try:
@@ -164,11 +165,16 @@ def main():
     else:
         helpers.logprefix = 'server: '
     debug1('latency control setting = %r\n' % latency_control)
+    debug1('send known routes = %r\n' % send_nets)
 
-    routes = list(list_routes())
-    debug1('available routes:\n')
-    for r in routes:
-        debug1('  %s/%d\n' % r)
+    if send_nets:
+        routes = list(list_routes())
+        debug1('available routes:\n')
+        for r in routes:
+            debug1('  %s/%d\n' % r)
+    else:
+        routes = list()
+        debug1('not sending routes\n')
         
     # synchronization header
     sys.stdout.write('\0\0SSHUTTLE0001')

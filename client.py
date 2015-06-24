@@ -96,17 +96,20 @@ def original_dst(sock):
 
 
 class FirewallClient:
-    def __init__(self, port, subnets_include, subnets_exclude, dnsport):
+    def __init__(self, port, subnets_include, subnets_exclude, dnsport, dns_hosts):
         self.port = port
         self.auto_nets = []
         self.subnets_include = subnets_include
         self.subnets_exclude = subnets_exclude
         self.dnsport = dnsport
+        self.dns_hosts = dns_hosts
         argvbase = ([sys.argv[1], sys.argv[0], sys.argv[1]] +
                     ['-v'] * (helpers.verbose or 0) +
                     ['--firewall', str(port), str(dnsport)])
         if ssyslog._p:
             argvbase += ['--syslog']
+        if dnsport:
+             argvbase += ['--dns-hosts', ','.join(dns_hosts)]
         argv_tries = [
             ['sudo', '-p', '[local sudo] Password: '] + argvbase,
             ['su', '-c', ' '.join(argvbase)],
@@ -151,10 +154,10 @@ class FirewallClient:
 
     def start(self):
         self.pfile.write('ROUTES\n')
-        for (ip,width) in self.subnets_include+self.auto_nets:
-            self.pfile.write('%d,0,%s\n' % (width, ip))
-        for (ip,width) in self.subnets_exclude:
-            self.pfile.write('%d,1,%s\n' % (width, ip))
+        for (ip,width,port) in self.subnets_include+self.auto_nets:
+            self.pfile.write('%d,%d,0,%s\n' % (width, port, ip))
+        for (ip,width,port) in self.subnets_exclude:
+            self.pfile.write('%d,%d,1,%s\n' % (width, port, ip))
         self.pfile.write('GO\n')
         self.pfile.flush()
         line = self.pfile.readline()
@@ -249,7 +252,8 @@ def _main(listener, fw, ssh_cmd, remotename, python, latency_control,
     try:
         (serverproc, serversock) = ssh.connect(ssh_cmd, remotename, python,
                         stderr=ssyslog._p and ssyslog._p.stdin,
-                        options=dict(latency_control=latency_control))
+                        options=dict(latency_control=latency_control,
+                            send_nets=auto_nets))
     except socket.error, e:
         if e.args[0] == errno.EPIPE:
             raise Fatal("failed to establish ssh session (1)")
@@ -336,7 +340,8 @@ def _main(listener, fw, ssh_cmd, remotename, python, latency_control,
         mux.callback()
 
 
-def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
+def main(listenip, ssh_cmd, remotename, python, latency_control,
+         dns, dns_hosts,
          seed_hosts, auto_nets,
          subnets_include, subnets_exclude, syslog, daemon, pidfile):
     if syslog:
@@ -373,19 +378,22 @@ def main(listenip, ssh_cmd, remotename, python, latency_control, dns,
     if not bound:
         assert(last_e)
         raise last_e
-    listener.listen(10)
+    listener.listen(socket.SOMAXCONN)
     listenip = listener.getsockname()
     debug1('Listening on %r.\n' % (listenip,))
 
-    if dns:
+    if dns or dns_hosts:
         dnsip = dnslistener.getsockname()
         debug1('DNS listening on %r.\n' % (dnsip,))
         dnsport = dnsip[1]
+        if dns:
+            dns_hosts += resolvconf_nameservers()
     else:
         dnsport = 0
         dnslistener = None
+        dns_hosts = []
 
-    fw = FirewallClient(listenip[1], subnets_include, subnets_exclude, dnsport)
+    fw = FirewallClient(listenip[1], subnets_include, subnets_exclude, dnsport, dns_hosts)
     
     try:
         return _main(listener, fw, ssh_cmd, remotename,
